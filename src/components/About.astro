@@ -1,7 +1,19 @@
+---
+import { Image } from "astro:assets";
+import profile from "../assets/profile.jpeg";
+---
+
 <section id="about" class="section">
   <div class="container narrow">
-    <!-- TODO: replace with an <Image class="profile" /> from astro:assets -->
-    <div class="profile" aria-hidden="true"></div>
+    <Image
+      class="profile"
+      src={profile}
+      alt="Two smiling hikers in toques on a forest trail beside a waterfall"
+      width={480}
+      widths={[240, 480]}
+      sizes="200px"
+      style="object-position: 32% center"
+    />
     <h2>About</h2>
     <p>
       I taught myself to knit in 2018 when raising my twin boys slowed down.
