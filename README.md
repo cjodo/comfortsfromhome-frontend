@@ -2,7 +2,7 @@
 
 One-page website for Comforts From Home, a hand-knitting business in Canmore, Alberta.
 
-Built with plain HTML/CSS/JS and [Vite](https://vite.dev).
+Built with [Astro](https://astro.build).
 
 ## Development
 
@@ -14,14 +14,21 @@ npm run preview   # serve the production build locally
 npm run format    # format with Prettier
 ```
 
+Locally the site runs at http://localhost:4321/. On GitHub Pages it's served under
+`/comfortsfromhome-frontend/` — that prefix is only applied in CI (see `base` in
+`astro.config.mjs`).
+
 ## Structure
 
-- `index.html` — the page content
-- `src/style.css` — styles and color palette (CSS variables at the top)
-- `src/main.js` — entry point (imports font + styles)
-- `public/` — static files copied as-is (favicon, images)
+- `src/pages/index.astro` — the page; assembles the sections
+- `src/components/` — one component per section (Header, Hero, About, Work, Contact, Footer)
+- `src/layouts/Layout.astro` — `<head>`, font and global styles
+- `src/styles/global.css` — styles and color palette (CSS variables at the top)
+- `public/` — static files copied as-is (favicon)
 
 ## Deployment
 
 Pushing to `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`.
 In the repo's **Settings → Pages**, set **Source** to **GitHub Actions**.
+
+If you move to a custom domain, update `site` and remove `base` in `astro.config.mjs`.

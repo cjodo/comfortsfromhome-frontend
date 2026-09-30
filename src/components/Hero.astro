@@ -1,0 +1,28 @@
+---
+import { Image } from "astro:assets";
+import heroImage from "../assets/cfh-hero.jpeg";
+---
+
+<section class="hero">
+  <Image
+    class="hero-img"
+    src={heroImage}
+    alt="Mountain peaks rising above an evergreen forest in Canmore"
+    width={2400}
+    widths={[640, 1024, 1600, 2400]}
+    sizes="100vw"
+    loading="eager"
+    fetchpriority="high"
+  />
+  <div class="container hero-content">
+    <p class="eyebrow">Hand-knit in Canmore, Alberta</p>
+    <h1>Warm, handmade comforts for mountain living.</h1>
+    <!-- TODO: replace with real tagline -->
+    <p class="lede">
+      Cozy knitwear made one stitch at a time, right here in the Bow Valley.
+    </p>
+    <a class="button" href="#contact">
+      Get in touch
+    </a>
+  </div>
+</section>

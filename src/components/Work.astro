@@ -1,0 +1,55 @@
+---
+import { Image } from "astro:assets";
+import toque from "../assets/toque.jpeg";
+import sweater from "../assets/sweater.jpeg";
+import homeGood from "../assets/home-good.jpeg";
+
+// TODO: real descriptions
+// `position` sets which part of the photo stays visible when cropped square.
+const products = [
+  {
+    name: "Toques",
+    description: "Placeholder description.",
+    image: toque,
+    alt: "Orange hand-knit toque with a white maple leaf design",
+    position: "center 45%",
+  },
+  {
+    name: "Sweaters",
+    description: "Placeholder description.",
+    image: sweater,
+    alt: "Green cardigan made of daisy granny squares",
+    position: "center 30%",
+  },
+  {
+    name: "Home Goods",
+    description: "Placeholder description.",
+    image: homeGood,
+    alt: "Mustard-yellow handmade basket",
+    position: "center 65%",
+  },
+];
+---
+
+<section id="work" class="section alt">
+  <div class="container">
+    <h2>The Work</h2>
+    <div class="grid">
+      {products.map((product) => (
+        <article class="card">
+          <Image
+            class="card-img"
+            src={product.image}
+            alt={product.alt}
+            width={800}
+            widths={[400, 800]}
+            sizes="(min-width: 800px) 320px, 100vw"
+            style={`object-position: ${product.position}`}
+          />
+          <h3>{product.name}</h3>
+          <p>{product.description}</p>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
