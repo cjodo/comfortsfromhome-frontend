@@ -1,26 +1,85 @@
 ---
 import "@fontsource-variable/nunito-sans";
 import "../styles/global.css";
+import { getImage } from "astro:assets";
+import heroImage from "../assets/cfh-hero.jpeg";
 
 interface Props {
   title: string;
   description: string;
+  noindex?: boolean;
 }
 
-const { title, description } = Astro.props;
+const { title, description, noindex = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const siteName = "Comforts From Home";
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+
+// Social preview image (Facebook, iMessage, etc.) at the recommended 1200×630.
+const ogImage = await getImage({
+  src: heroImage,
+  width: 1200,
+  height: 630,
+  fit: "cover",
+  format: "jpg",
+});
+const ogImageURL = new URL(ogImage.src, Astro.site);
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  name: siteName,
+  description,
+  url: new URL(base, Astro.site).href,
+  image: ogImageURL.href,
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Canmore",
+    addressRegion: "AB",
+    addressCountry: "CA",
+  },
+};
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en-CA">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex" />}
+    {!noindex && <link rel="canonical" href={canonicalURL} />}
+    <meta name="theme-color" content="#1f3a4f" />
+
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <link rel="apple-touch-icon" href={`${base}apple-touch-icon.png`} />
+    <link rel="sitemap" href={`${base}sitemap-index.xml`} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:image" content={ogImageURL} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Mountain peaks above an evergreen forest in Canmore"
+    />
+    <meta property="og:locale" content="en_CA" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify(structuredData)}
+    />
   </head>
   <body>
+    <a class="skip-link" href="#main">
+      Skip to content
+    </a>
     <slot />
   </body>
 </html>
