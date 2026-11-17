@@ -1,0 +1,78 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import Gallery from "../components/Gallery.astro";
+import Lightbox from "../components/Lightbox.astro";
+import { categories, getCover, getPhotos } from "../lib/gallery";
+
+// How many photos to preview per category on this page.
+const PREVIEW = 6;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const sections = categories.map((category) => ({
+  ...category,
+  photos: getPhotos(category.slug),
+}));
+const total = sections.reduce((sum, s) => sum + s.photos.length, 0);
+const cover = sections.map(getCover).find(Boolean);
+---
+
+<Layout
+  title="Gallery · Comforts From Home"
+  description="Hand-knit toques, sweaters and home goods, made in Canmore, Alberta."
+  ogImage={cover?.src}
+  ogImageAlt={cover?.alt}
+>
+  <Header />
+  <main id="main" class="section">
+    <div class="container">
+      <header class="page-intro">
+        <p class="eyebrow">Gallery</p>
+        <h1>All the work</h1>
+        <p class="lede">
+          {total} hand-knit {total === 1 ? "piece" : "pieces"}, made one stitch
+          at a time in the Bow Valley.
+        </p>
+      </header>
+
+      {sections.map((section, i) => {
+        const href = `${base}${section.slug}/`;
+        const more = section.photos.length > PREVIEW;
+        return (
+          <section
+            class="gallery-section"
+            aria-labelledby={`g-${section.slug}`}
+          >
+            <div class="gallery-section-head">
+              <div>
+                <h2 id={`g-${section.slug}`}>
+                  <a href={href}>{section.name}</a>
+                </h2>
+                <p>{section.description}</p>
+              </div>
+              <a class="see-all" href={href}>
+                {more
+                  ? `See all ${section.photos.length}`
+                  : `View ${section.name.toLowerCase()}`}
+                <span aria-hidden="true"> →</span>
+              </a>
+            </div>
+            <Gallery
+              photos={section.photos}
+              limit={PREVIEW}
+              eager={i === 0 ? 3 : 0}
+            />
+          </section>
+        );
+      })}
+
+      <p class="gallery-cta">
+        Like something you see?{" "}
+        <a href={`${base}#contact`}>Ask about a custom order</a>
+      </p>
+      <Lightbox />
+    </div>
+  </main>
+  <Footer />
+</Layout>

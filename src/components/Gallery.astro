@@ -1,0 +1,57 @@
+---
+import { Picture, getImage } from "astro:assets";
+import type { Photo } from "../lib/gallery";
+
+interface Props {
+  photos: Photo[];
+  /** Show at most this many photos. */
+  limit?: number;
+  /** How many photos load immediately (the rest load as you scroll). */
+  eager?: number;
+}
+
+const { photos: allPhotos, limit, eager = 4 } = Astro.props;
+const photos = limit ? allPhotos.slice(0, limit) : allPhotos;
+
+// Large version shown in the lightbox (and the no-JS fallback link).
+const items = await Promise.all(
+  photos.map(async (photo) => {
+    const full = await getImage({
+      src: photo.src,
+      width: 2000,
+      quality: 80,
+      format: "webp",
+    });
+    return { ...photo, full: full.src };
+  }),
+);
+---
+
+{items.length === 0 ? (
+  <p class="gallery-empty">New pieces coming soon.</p>
+) : (
+  <ul class="gallery" data-gallery>
+    {items.map((item, i) => (
+      <li class="gallery-item">
+        <a
+          href={item.full}
+          data-full={item.full}
+          data-caption={item.caption ?? ""}
+          data-alt={item.alt}
+        >
+          <Picture
+            src={item.src}
+            alt={item.alt}
+            width={1200}
+            formats={["avif", "webp"]}
+            widths={[400, 800, 1200]}
+            sizes="(min-width: 1000px) 340px, (min-width: 640px) 50vw, 100vw"
+            loading={i < eager ? "eager" : "lazy"}
+            decoding="async"
+          />
+        </a>
+        {item.caption && <p class="gallery-caption">{item.caption}</p>}
+      </li>
+    ))}
+  </ul>
+)}

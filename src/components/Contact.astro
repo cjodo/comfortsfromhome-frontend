@@ -1,10 +1,115 @@
+---
+// Messages are delivered by FormSubmit (https://formsubmit.co), no account
+// needed. The very first submission sends an activation email to this address;
+// click the link in it and every message after that arrives normally.
+const email = "cfhcanmore@gmail.com";
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const returnURL = new URL(`${base}?sent=1#contact`, Astro.site).href;
+---
+
 <section id="contact" class="section">
   <div class="container narrow">
     <h2>Contact</h2>
-    <!-- TODO: real contact details -->
-    <p>Custom orders and questions are always welcome.</p>
     <p>
-      <a href="mailto:hello@example.com">hello@example.com</a>
+      Custom orders and questions are always welcome. Send a message below or
+      email <a href={`mailto:${email}`}>{email}</a>.
     </p>
+    <p class="contact-gallery">
+      Looking for ideas? <a href={`${base}gallery/`}>Browse the gallery</a>
+      <span aria-hidden="true"> →</span>
+    </p>
+
+    <form
+      class="contact-form"
+      action={`https://formsubmit.co/${email}`}
+      method="POST"
+      data-endpoint={`https://formsubmit.co/ajax/${email}`}
+      data-contact-form
+    >
+      <input
+        type="hidden"
+        name="_subject"
+        value="New message from comfortsfromhome.shop"
+      />
+      <input type="hidden" name="_template" value="table" />
+      <input type="hidden" name="_next" value={returnURL} />
+      <!-- Spam trap: people never see or fill this in. -->
+      <input
+        class="visually-hidden"
+        type="text"
+        name="_honey"
+        tabindex="-1"
+        autocomplete="off"
+        aria-hidden="true"
+      />
+
+      <div class="field-row">
+        <label class="field">
+          <span>Name</span>
+          <input type="text" name="name" autocomplete="name" required />
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" name="email" autocomplete="email" required />
+        </label>
+      </div>
+      <label class="field">
+        <span>Message</span>
+        <textarea
+          name="message"
+          rows="5"
+          required
+          placeholder="Tell me what you're looking for: colours, sizes, the piece that caught your eye…"
+        ></textarea>
+      </label>
+
+      <button class="button" type="submit">
+        Send message
+      </button>
+      <p class="form-status" role="status" aria-live="polite"></p>
+    </form>
   </div>
 </section>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>("[data-contact-form]");
+  const status = form?.querySelector<HTMLElement>(".form-status");
+
+  // Arriving back here after a no-JavaScript submission.
+  if (form && status && new URLSearchParams(location.search).has("sent")) {
+    status.textContent = "Thanks! Your message is on its way.";
+    status.dataset.state = "success";
+  }
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!status) return;
+    const button = form.querySelector<HTMLButtonElement>("button")!;
+    button.disabled = true;
+    status.dataset.state = "";
+    status.textContent = "Sending…";
+
+    try {
+      const response = await fetch(form.dataset.endpoint!, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: new URLSearchParams(
+          new FormData(form) as unknown as Record<string, string>,
+        ),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || String(result.success) === "false") {
+        throw new Error(result.message ?? response.statusText);
+      }
+      form.reset();
+      status.textContent = "Thanks! Your message is on its way.";
+      status.dataset.state = "success";
+    } catch {
+      status.textContent =
+        "Sorry, that didn't send. Please try again, or email cfhcanmore@gmail.com.";
+      status.dataset.state = "error";
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
