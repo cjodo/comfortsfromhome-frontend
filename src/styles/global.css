@@ -8,6 +8,7 @@
   /* Soft yellows */
   --yellow-500: #f2c94c;
   --yellow-200: #f9e7a8;
+  --yellow-100: #fdf3dc;
   --yellow-50: #fffbee;
 
   --text: var(--blue-900);
@@ -371,7 +372,7 @@ a {
   gap: 1rem;
   margin-top: 2rem;
   padding: clamp(1.25rem, 4vw, 2rem);
-  background: #fff;
+  background: var(--yellow-100);
   border-radius: var(--radius);
   box-shadow: 0 1px 3px rgb(31 58 79 / 0.08);
 }
@@ -400,7 +401,7 @@ a {
   padding: 0.7rem 0.85rem;
   border: 1.5px solid var(--blue-300);
   border-radius: calc(var(--radius) - 4px);
-  background: var(--yellow-50);
+  background: #fff;
   color: var(--text);
   font: inherit;
   font-weight: 400;
