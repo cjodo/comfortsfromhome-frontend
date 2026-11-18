@@ -24,7 +24,7 @@
 
         <label>Photos</label>
         <label class="pick">
-          <input id="files" type="file" accept="image/*" multiple />
+          <input id="files" type="file" accept="image/*,.heic,.heif" multiple />
           Choose photos
         </label>
         <ul id="list"></ul>
@@ -50,13 +50,22 @@
       }
 
       $("files").addEventListener("change", (e) => {
-        picked = [...e.target.files];
+        // Start preparing each photo right away; uploading waits for it.
+        picked = [...e.target.files].map((file) => {
+          const ready = shrink(file);
+          ready.catch(() => {}); // reported when uploading
+          return { file, ready };
+        });
         list.replaceChildren(
-          ...picked.map((file, i) => {
+          ...picked.map(({ file, ready }, i) => {
             const li = document.createElement("li");
             const img = document.createElement("img");
             img.src = URL.createObjectURL(file);
             img.alt = "";
+            // Show the converted version (HEIC can't be previewed in most browsers).
+            ready.then((blob) => {
+              if (blob !== file) img.src = URL.createObjectURL(blob);
+            });
             const box = document.createElement("div");
             const lab = document.createElement("label");
             lab.htmlFor = `name-${i}`;
@@ -74,10 +83,38 @@
         setStatus("");
       });
 
-      // Shrink big phone photos before uploading (also removes location data).
-      async function shrink(file) {
+      // iPhone HEIC photos: most browsers can't read them, so load a decoder
+      // only when one is picked.
+      const HEIC_DECODER =
+        "https://cdn.jsdelivr.net/npm/heic-to@1.6.7/dist/heic-to.js";
+      let heicDecoder;
+      const isHeicFile = (file) =>
+        /^image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+
+      async function decode(file) {
         try {
-          const bitmap = await createImageBitmap(file);
+          return await createImageBitmap(file);
+        } catch (err) {
+          if (!isHeicFile(file)) throw err;
+          heicDecoder ??= import(HEIC_DECODER);
+          const { heicTo } = await heicDecoder;
+          return heicTo({ blob: file, type: "bitmap" });
+        }
+      }
+
+      // Convert to JPEG and shrink big phone photos before uploading (this
+      // also removes location data).
+      async function shrink(file) {
+        let bitmap;
+        try {
+          bitmap = await decode(file);
+        } catch (err) {
+          if (isHeicFile(file)) {
+            throw new Error(`Couldn't read "${file.name}". Try another photo.`);
+          }
+          return file; // the server checks it and explains if it can't be used
+        }
+        try {
           const scale = Math.min(
             1,
             2400 / Math.max(bitmap.width, bitmap.height),
@@ -110,9 +147,14 @@
 
         const data = new FormData();
         data.append("category", $("category").value);
-        for (const [i, file] of picked.entries()) {
-          data.append("photo", await shrink(file), file.name);
-          data.append("name", $(`name-${i}`).value);
+        try {
+          for (const [i, { file, ready }] of picked.entries()) {
+            data.append("photo", await ready, file.name);
+            data.append("name", $(`name-${i}`).value);
+          }
+        } catch (err) {
+          button.disabled = false;
+          return setStatus(err.message, "err");
         }
 
         setStatus("Uploading…");

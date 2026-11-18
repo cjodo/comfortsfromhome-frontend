@@ -171,7 +171,7 @@ async function savePhotos(form) {
     const ext = imageType(bytes);
     if (!ext) {
       throw new UserError(
-        `"${photo.name}" isn't a JPEG, PNG or WebP photo, so it can't be added.`,
+        `"${photo.name}" isn't a JPEG, PNG, WebP or HEIC photo, so it can't be added.`,
       );
     }
     files.push({ bytes, ext, slug: slugify(names[i] ?? "") || "photo" });
