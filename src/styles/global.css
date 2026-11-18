@@ -475,7 +475,12 @@ a {
 
 .page-intro {
   max-width: 40rem;
-  margin-bottom: clamp(2rem, 5vw, 3rem);
+  margin: 0 auto clamp(2rem, 5vw, 3rem);
+  text-align: center;
+}
+
+.page-intro .lede {
+  margin-inline: auto;
 }
 
 .page-intro h1 {
@@ -530,7 +535,7 @@ a {
 /* Masonry gallery: photos keep their natural shape */
 .gallery {
   list-style: none;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
   columns: 1;
   column-gap: 1.25rem;
@@ -545,6 +550,19 @@ a {
 @media (min-width: 1000px) {
   .gallery {
     columns: 3;
+  }
+}
+
+/* Fewer photos than columns: use fewer, narrower columns so they stay centered. */
+.gallery[data-count="1"] {
+  columns: 1;
+  max-width: 26rem;
+}
+
+@media (min-width: 1000px) {
+  .gallery[data-count="2"] {
+    columns: 2;
+    max-width: 42rem;
   }
 }
 

@@ -30,7 +30,7 @@ const items = await Promise.all(
 {items.length === 0 ? (
   <p class="gallery-empty">New pieces coming soon.</p>
 ) : (
-  <ul class="gallery" data-gallery>
+  <ul class="gallery" data-gallery data-count={items.length}>
     {items.map((item, i) => (
       <li class="gallery-item">
         <a
