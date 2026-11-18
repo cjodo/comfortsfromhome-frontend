@@ -52,6 +52,23 @@ src/assets/gallery/
 To add a new category, create a folder and add an entry to `categories` in
 `src/lib/gallery.ts`. Its page appears at `/<folder-name>/`.
 
+### Uploading from the website
+
+`/admin` (e.g. https://comfortsfromhome.shop/admin) is a password-protected
+page for adding photos from a phone or computer: pick a category, choose
+photos, say what each one is, and upload. Photos are shrunk in the browser
+(which also strips location data), committed to the right gallery folder on
+`main`, and live after Railway's next deploy (about 5 minutes).
+
+It runs from `admin/server.mjs` in the same container as the site and needs
+two Railway service variables:
+
+- `ADMIN_PASSWORD`: the password for the page (use a long one)
+- `GITHUB_TOKEN`: a fine-grained GitHub token limited to this repo, with
+  **Contents: Read and write** permission
+
+Captions and cover crops are still edited in `captions.json`.
+
 ## Contact form
 
 The form in `src/components/Contact.astro` sends messages to
