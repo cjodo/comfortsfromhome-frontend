@@ -1,12 +1,13 @@
 // Tiny photo-upload admin for the static site.
 //
-// Serves /admin (a password-protected upload form) and saves uploaded photos
-// by committing them to src/assets/gallery/<category>/ on GitHub. Railway
+// Serves /admin/login (password sign-in) and /admin (the upload form), and
+// saves uploaded photos by committing them to src/assets/gallery/<category>/ on GitHub. Railway
 // redeploys on every push to the branch, so the photos go live after the next
 // build. No dependencies: run with `node admin/server.mjs`.
 //
 // Environment:
-//   ADMIN_PASSWORD  required; the password typed on the admin page
+//   ADMIN_PASSWORD  required; the password typed on the sign-in page.
+//                   Changing it signs everyone out.
 //   GITHUB_TOKEN    required; fine-grained token with Contents read/write on the repo
 //   GITHUB_REPO     default cjodo/comfortsfromhome-frontend
 //   GITHUB_BRANCH   default main
@@ -14,7 +15,7 @@
 //   DRY_RUN=1       report the filenames that would be saved, without committing
 
 import { createServer } from "node:http";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 const PORT = Number(process.env.ADMIN_PORT ?? 3001);
@@ -28,7 +29,10 @@ const DRY_RUN = process.env.DRY_RUN === "1";
 const GALLERY = "src/assets/gallery";
 const MAX_BYTES = 60 * 1024 * 1024;
 const MAX_PHOTOS = 20;
-const PAGE = readFileSync(new URL("./page.html", import.meta.url), "utf8");
+const read = (file) => readFileSync(new URL(file, import.meta.url), "utf8");
+const UPLOAD_PAGE = read("./upload.html");
+const LOGIN_PAGE = read("./login.html");
+const CSS = read("./admin.css");
 
 class UserError extends Error {
   constructor(message, status = 400) {
@@ -52,6 +56,31 @@ async function checkPassword(given) {
   failures.push(now);
   await new Promise((r) => setTimeout(r, 1000));
   throw new UserError("Wrong password.", 401);
+}
+
+// --- Session cookie: "<expiry>.<signature>", signed with the password ---
+
+const COOKIE = "cfh_admin";
+const SESSION_DAYS = 30;
+const sessionKey = sha(`cfh-admin-session:${PASSWORD}`);
+const sign = (value) =>
+  createHmac("sha256", sessionKey).update(value).digest("base64url");
+
+function sessionCookie() {
+  const expires = String(Date.now() + SESSION_DAYS * 86_400_000);
+  return `${COOKIE}=${expires}.${sign(expires)}; Path=/admin; Max-Age=${SESSION_DAYS * 86_400}; HttpOnly; Secure; SameSite=Lax`;
+}
+const clearCookie = `${COOKIE}=; Path=/admin; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
+
+function signedIn(req) {
+  const match = new RegExp(`(?:^|;\\s*)${COOKIE}=([^;]+)`).exec(
+    req.headers.cookie ?? "",
+  );
+  const [expires, signature] = (match?.[1] ?? "").split(".");
+  if (!expires || !signature || Number(expires) < Date.now()) return false;
+  const expected = Buffer.from(sign(expires));
+  const given = Buffer.from(signature);
+  return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
 // --- GitHub ----------------------------------------------------------------
@@ -206,26 +235,36 @@ async function savePhotos(form) {
 
 // --- HTTP ------------------------------------------------------------------
 
-function send(res, status, type, body) {
+function send(res, status, type, body, headers = {}) {
   res.writeHead(status, {
     "Content-Type": type,
     "Cache-Control": "no-store",
     "X-Robots-Tag": "noindex, nofollow",
+    ...headers,
   });
   res.end(body);
 }
+const html = (res, status, body, headers) =>
+  send(res, status, "text/html; charset=utf-8", body, headers);
+const redirect = (res, location, headers = {}) =>
+  send(res, 303, "text/plain", "", { Location: location, ...headers });
+const loginPage = (error = "") =>
+  LOGIN_PAGE.replace(
+    "<!--ERROR-->",
+    error && `<p class="error" role="alert">${escapeHtml(error)}</p>`,
+  );
 const json = (res, status, data) =>
   send(res, status, "application/json", JSON.stringify(data));
 
-async function readBody(req) {
-  if (Number(req.headers["content-length"] ?? 0) > MAX_BYTES) {
+async function readBody(req, limit = MAX_BYTES) {
+  if (Number(req.headers["content-length"] ?? 0) > limit) {
     throw new UserError("That's too much at once. Try fewer photos.", 413);
   }
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BYTES) {
+    if (size > limit) {
       throw new UserError("That's too much at once. Try fewer photos.", 413);
     }
     chunks.push(chunk);
@@ -254,34 +293,55 @@ createServer(async (req, res) => {
   const { pathname } = new URL(req.url ?? "/", "http://localhost");
   try {
     if (!PASSWORD || !TOKEN) {
-      return send(
-        res,
-        503,
-        "text/plain",
-        "Admin is not set up"
-      );
+      return send(res, 503, "text/plain", "Admin is not set up");
     }
 
-    if (
-      req.method === "GET" &&
-      (pathname === "/admin" || pathname === "/admin/")
-    ) {
+    const route = `${req.method} ${pathname.replace(/\/+$/, "") || "/"}`;
+
+    if (route === "GET /admin/admin.css") {
+      return send(res, 200, "text/css; charset=utf-8", CSS);
+    }
+
+    if (route === "GET /admin/login") {
+      return signedIn(req)
+        ? redirect(res, "/admin")
+        : html(res, 200, loginPage());
+    }
+
+    if (route === "POST /admin/login") {
+      const form = new URLSearchParams(
+        (await readBody(req, 10_000)).toString(),
+      );
+      try {
+        await checkPassword(form.get("password"));
+      } catch (err) {
+        if (err instanceof UserError) {
+          return html(res, err.status, loginPage(err.message));
+        }
+        throw err;
+      }
+      return redirect(res, "/admin", { "Set-Cookie": sessionCookie() });
+    }
+
+    if (route === "POST /admin/logout") {
+      return redirect(res, "/admin/login", { "Set-Cookie": clearCookie });
+    }
+
+    if (route === "GET /admin") {
+      if (!signedIn(req)) return redirect(res, "/admin/login");
       const options = (await listCategories())
         .map(
           (slug) =>
             `<option value="${escapeHtml(slug)}">${escapeHtml(label(slug))}</option>`,
         )
         .join("");
-      return send(
-        res,
-        200,
-        "text/html; charset=utf-8",
-        PAGE.replace("<!--CATEGORIES-->", options),
-      );
+      return html(res, 200, UPLOAD_PAGE.replace("<!--CATEGORIES-->", options));
     }
 
-    if (req.method === "POST" && pathname === "/admin/upload") {
-      await checkPassword(req.headers["x-admin-password"]);
+    if (route === "POST /admin/upload") {
+      if (!signedIn(req)) {
+        throw new UserError("Your sign-in expired. Please sign in again.", 401);
+      }
       const body = await readBody(req);
       const form = await new Response(body, {
         headers: { "Content-Type": req.headers["content-type"] ?? "" },

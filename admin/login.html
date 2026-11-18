@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Sign In</title>
+    <link rel="stylesheet" href="/admin/admin.css" />
+  </head>
+  <body>
+    <main class="login">
+      <p class="brand">Comforts From Home</p>
+      <h1>Sign in</h1>
+      <form method="post" action="/admin/login">
+        <input
+          type="text"
+          name="username"
+          value="admin"
+          autocomplete="username"
+          hidden
+        />
+        <label for="password" class="first">Password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+          autofocus
+        />
+        <!--ERROR-->
+        <button type="submit">Sign in</button>
+      </form>
+    </main>
+  </body>
+</html>

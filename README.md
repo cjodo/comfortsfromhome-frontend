@@ -54,16 +54,18 @@ To add a new category, create a folder and add an entry to `categories` in
 
 ### Uploading from the website
 
-`/admin` (e.g. https://cfhcanmore.ca/admin) is a password-protected
-page for adding photos from a phone or computer: pick a category, choose
-photos, say what each one is, and upload. Photos are shrunk in the browser
-(which also strips location data), committed to the right gallery folder on
-`main`, and live after Railway's next deploy (about 5 minutes).
+`/admin` (e.g. https://cfhcanmore.ca/admin) is for adding photos from a phone
+or computer. Sign in with the password (it stays signed in for 30 days), then
+pick a category, choose photos, say what each one is, and upload. Photos are
+shrunk in the browser (which also strips location data), committed to the
+right gallery folder on `main`, and live after Railway's next deploy (about 5
+minutes).
 
 It runs from `admin/server.mjs` in the same container as the site and needs
 two Railway service variables:
 
-- `ADMIN_PASSWORD`: the password for the page (use a long one)
+- `ADMIN_PASSWORD`: the sign-in password (use a long one; changing it signs
+  everyone out)
 - `GITHUB_TOKEN`: a fine-grained GitHub token limited to this repo, with
   **Contents: Read and write** permission
 
