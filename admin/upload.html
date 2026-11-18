@@ -25,7 +25,7 @@
         <label>Photos</label>
         <label class="pick">
           <input id="files" type="file" accept="image/*,.heic,.heif" multiple />
-          Choose photos
+          <span id="pick-label">Choose photos</span>
         </label>
         <ul id="list"></ul>
 
@@ -49,37 +49,61 @@
         status.className = kind;
       }
 
-      $("files").addEventListener("change", (e) => {
-        // Start preparing each photo right away; uploading waits for it.
-        picked = [...e.target.files].map((file) => {
-          const ready = shrink(file);
-          ready.catch(() => {}); // reported when uploading
-          return { file, ready };
+      let nextId = 0;
+
+      function updatePickLabel() {
+        $("pick-label").textContent = picked.length
+          ? "Add more photos"
+          : "Choose photos";
+      }
+
+      // Each picked photo gets a row: thumbnail, "What is it?" and an X.
+      function addPhoto(file) {
+        const id = `name-${nextId++}`;
+        const ready = shrink(file); // start preparing now; uploading waits for it
+        ready.catch(() => {}); // reported when uploading
+
+        const li = document.createElement("li");
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(file);
+        img.alt = "";
+        // Show the converted version (HEIC can't be previewed in most browsers).
+        ready.then((blob) => {
+          if (blob !== file) img.src = URL.createObjectURL(blob);
         });
-        list.replaceChildren(
-          ...picked.map(({ file, ready }, i) => {
-            const li = document.createElement("li");
-            const img = document.createElement("img");
-            img.src = URL.createObjectURL(file);
-            img.alt = "";
-            // Show the converted version (HEIC can't be previewed in most browsers).
-            ready.then((blob) => {
-              if (blob !== file) img.src = URL.createObjectURL(blob);
-            });
-            const box = document.createElement("div");
-            const lab = document.createElement("label");
-            lab.htmlFor = `name-${i}`;
-            lab.textContent = "What is it?";
-            const input = document.createElement("input");
-            input.type = "text";
-            input.id = `name-${i}`;
-            input.required = true;
-            input.placeholder = "e.g. Blue cable toque";
-            box.append(lab, input);
-            li.append(img, box);
-            return li;
-          }),
-        );
+        const box = document.createElement("div");
+        const lab = document.createElement("label");
+        lab.htmlFor = id;
+        lab.textContent = "What is it?";
+        const input = document.createElement("input");
+        input.type = "text";
+        input.id = id;
+        input.required = true;
+        input.placeholder = "e.g. Blue cable toque";
+        box.append(lab, input);
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "remove";
+        remove.textContent = "×";
+        remove.setAttribute("aria-label", `Remove ${file.name}`);
+
+        const item = { file, ready, input };
+        remove.addEventListener("click", () => {
+          picked = picked.filter((p) => p !== item);
+          li.remove();
+          updatePickLabel();
+        });
+
+        li.append(img, box, remove);
+        list.append(li);
+        picked.push(item);
+      }
+
+      $("files").addEventListener("change", (e) => {
+        [...e.target.files].forEach(addPhoto);
+        e.target.value = ""; // so the same photo can be picked again
+        updatePickLabel();
         setStatus("");
       });
 
@@ -148,9 +172,9 @@
         const data = new FormData();
         data.append("category", $("category").value);
         try {
-          for (const [i, { file, ready }] of picked.entries()) {
+          for (const { file, ready, input } of picked) {
             data.append("photo", await ready, file.name);
-            data.append("name", $(`name-${i}`).value);
+            data.append("name", input.value);
           }
         } catch (err) {
           button.disabled = false;
@@ -185,7 +209,7 @@
             );
             picked = [];
             list.replaceChildren();
-            $("files").value = "";
+            updatePickLabel();
           } else {
             setStatus(
               body.error ??
