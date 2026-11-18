@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Add Photos</title>
+    <style>
+      :root {
+        --text: #1f3a4f;
+        --muted: #4f6676;
+        --bg: #fffbee;
+        --card: #ffffff;
+        --line: #e3dcc6;
+        --accent: #3d6b8c;
+        --ok: #2f7a4f;
+        --err: #b23b3b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          17px/1.5 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        max-width: 34rem;
+        margin: 0 auto;
+        padding: 2rem 1rem 4rem;
+      }
+      h1 {
+        font-family: Georgia, serif;
+        font-weight: 600;
+        margin: 0 0 1.5rem;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin: 1.25rem 0 0.4rem;
+      }
+      input[type="password"],
+      input[type="text"],
+      select {
+        width: 100%;
+        padding: 0.7rem 0.8rem;
+        font: inherit;
+        color: inherit;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      .pick {
+        display: block;
+        text-align: center;
+        padding: 1.5rem 1rem;
+        border: 2px dashed var(--line);
+        border-radius: 12px;
+        background: var(--card);
+        cursor: pointer;
+        font-weight: 600;
+        color: var(--accent);
+      }
+      .pick input {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+      }
+      .pick:focus-within {
+        outline: 3px solid var(--accent);
+        outline-offset: 2px;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 1rem 0 0;
+        display: grid;
+        gap: 0.75rem;
+      }
+      li {
+        display: grid;
+        grid-template-columns: 4.5rem 1fr;
+        gap: 0.75rem;
+        align-items: center;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 0.5rem;
+      }
+      li img {
+        width: 4.5rem;
+        height: 4.5rem;
+        object-fit: cover;
+        border-radius: 8px;
+      }
+      li label {
+        margin: 0 0 0.25rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      button {
+        margin-top: 1.5rem;
+        width: 100%;
+        padding: 0.9rem;
+        font: inherit;
+        font-weight: 700;
+        color: #fff;
+        background: var(--accent);
+        border: 0;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+      progress {
+        width: 100%;
+        margin-top: 1rem;
+      }
+      #status {
+        margin-top: 1rem;
+        font-weight: 600;
+      }
+      #status.ok {
+        color: var(--ok);
+      }
+      #status.err {
+        color: var(--err);
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin: 0.4rem 0 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Add photos</h1>
+      <form id="form">
+        <input
+          type="text"
+          name="username"
+          value="admin"
+          autocomplete="username"
+          hidden
+        />
+        <label for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          autocomplete="current-password"
+          required
+        />
+
+        <label for="category">Category</label>
+        <select id="category" required>
+          <!--CATEGORIES-->
+        </select>
+
+        <label>Photos</label>
+        <label class="pick">
+          <input id="files" type="file" accept="image/*" multiple />
+          Choose photos
+        </label>
+        <ul id="list"></ul>
+
+        <button id="submit" type="submit">Upload</button>
+        <progress id="progress" max="1" value="0" hidden></progress>
+        <p id="status" role="status"></p>
+        <p class="hint">
+          New photos appear on the website about 5 minutes after uploading.
+        </p>
+      </form>
+    </main>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const list = $("list");
+      const status = $("status");
+      let picked = [];
+
+      function setStatus(text, kind = "") {
+        status.textContent = text;
+        status.className = kind;
+      }
+
+      $("files").addEventListener("change", (e) => {
+        picked = [...e.target.files];
+        list.replaceChildren(
+          ...picked.map((file, i) => {
+            const li = document.createElement("li");
+            const img = document.createElement("img");
+            img.src = URL.createObjectURL(file);
+            img.alt = "";
+            const box = document.createElement("div");
+            const lab = document.createElement("label");
+            lab.htmlFor = `name-${i}`;
+            lab.textContent = "What is it?";
+            const input = document.createElement("input");
+            input.type = "text";
+            input.id = `name-${i}`;
+            input.required = true;
+            input.placeholder = "e.g. Blue cable toque";
+            box.append(lab, input);
+            li.append(img, box);
+            return li;
+          }),
+        );
+        setStatus("");
+      });
+
+      // Shrink big phone photos before uploading (also removes location data).
+      async function shrink(file) {
+        try {
+          const bitmap = await createImageBitmap(file);
+          const scale = Math.min(
+            1,
+            2400 / Math.max(bitmap.width, bitmap.height),
+          );
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(bitmap.width * scale);
+          canvas.height = Math.round(bitmap.height * scale);
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#fff"; // transparent PNGs get a white background
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          const blob = await new Promise((r) =>
+            canvas.toBlob(r, "image/jpeg", 0.85),
+          );
+          return blob ?? file;
+        } catch {
+          return file;
+        }
+      }
+
+      $("form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (picked.length === 0)
+          return setStatus("Choose at least one photo.", "err");
+
+        const button = $("submit");
+        const progress = $("progress");
+        button.disabled = true;
+        setStatus("Getting photos ready…");
+
+        const data = new FormData();
+        data.append("category", $("category").value);
+        for (const [i, file] of picked.entries()) {
+          data.append("photo", await shrink(file), file.name);
+          data.append("name", $(`name-${i}`).value);
+        }
+
+        setStatus("Uploading…");
+        progress.hidden = false;
+        progress.value = 0;
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/admin/upload");
+        xhr.setRequestHeader("X-Admin-Password", $("password").value);
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) progress.value = ev.loaded / ev.total;
+        };
+        xhr.onloadend = () => {
+          button.disabled = false;
+          progress.hidden = true;
+          let body = {};
+          try {
+            body = JSON.parse(xhr.responseText);
+          } catch {}
+          if (xhr.status === 200) {
+            const n = body.saved.length;
+            setStatus(
+              `Saved ${n} ${n === 1 ? "photo" : "photos"}! They'll be on the website in about 5 minutes.`,
+              "ok",
+            );
+            picked = [];
+            list.replaceChildren();
+            $("files").value = "";
+          } else {
+            setStatus(
+              body.error ??
+                "Upload failed. Check your connection and try again.",
+              "err",
+            );
+          }
+        };
+        xhr.send(data);
+      });
+    </script>
+  </body>
+</html>
