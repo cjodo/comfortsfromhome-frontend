@@ -258,7 +258,7 @@ createServer(async (req, res) => {
         res,
         503,
         "text/plain",
-        "Admin is not set up: ADMIN_PASSWORD and GITHUB_TOKEN are required.",
+        "Admin is not set up"
       );
     }
 
